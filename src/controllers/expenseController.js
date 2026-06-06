@@ -15,7 +15,7 @@ const createExpense = async (req, res) => {
       `INSERT INTO expenses 
        (user_id, title, amount, category, expense_date) 
        VALUES (?, ?, ?, ?, ?)`,
-      [userId, title, amount, category, expense_date]
+      [userId, title, amount, category, expense_date],
     );
 
     return res.status(201).json({
@@ -34,10 +34,29 @@ const getExpenses = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const [expenses] = await pool.query(
-      "SELECT * FROM expenses WHERE user_id = ? ORDER BY expense_date DESC",
-      [userId]
-    );
+    const { category, startDate, endDate } = req.query;
+
+    let query = "SELECT * FROM expenses WHERE user_id = ?";
+    const queryParams = [userId];
+
+    if (category) {
+      query += " AND category = ?";
+      queryParams.push(category);
+    }
+
+    if (startDate) {
+      query += " AND expense_date >= ?";
+      queryParams.push(startDate);
+    }
+
+    if (endDate) {
+      query += " AND expense_date <= ?";
+      queryParams.push(endDate);
+    }
+
+    query += " ORDER BY expense_date DESC";
+
+    const [expenses] = await pool.query(query, queryParams);
 
     return res.json(expenses);
   } catch (error) {
@@ -55,7 +74,7 @@ const getExpenseById = async (req, res) => {
 
     const [expenses] = await pool.query(
       "SELECT * FROM expenses WHERE id = ? AND user_id = ?",
-      [expenseId, userId]
+      [expenseId, userId],
     );
 
     if (expenses.length === 0) {
@@ -88,7 +107,7 @@ const updateExpense = async (req, res) => {
 
     const [existingExpense] = await pool.query(
       "SELECT * FROM expenses WHERE id = ? AND user_id = ?",
-      [expenseId, userId]
+      [expenseId, userId],
     );
 
     if (existingExpense.length === 0) {
@@ -101,7 +120,7 @@ const updateExpense = async (req, res) => {
       `UPDATE expenses
        SET title = ?, amount = ?, category = ?, expense_date = ?
        WHERE id = ? AND user_id = ?`,
-      [title, amount, category, expense_date, expenseId, userId]
+      [title, amount, category, expense_date, expenseId, userId],
     );
 
     return res.json({
@@ -122,7 +141,7 @@ const deleteExpense = async (req, res) => {
 
     const [existingExpense] = await pool.query(
       "SELECT * FROM expenses WHERE id = ? AND user_id = ?",
-      [expenseId, userId]
+      [expenseId, userId],
     );
 
     if (existingExpense.length === 0) {
@@ -131,10 +150,10 @@ const deleteExpense = async (req, res) => {
       });
     }
 
-    await pool.query(
-      "DELETE FROM expenses WHERE id = ? AND user_id = ?",
-      [expenseId, userId]
-    );
+    await pool.query("DELETE FROM expenses WHERE id = ? AND user_id = ?", [
+      expenseId,
+      userId,
+    ]);
 
     return res.json({
       message: "Expense deleted successfully",
@@ -159,7 +178,7 @@ const getMonthlySummary = async (req, res) => {
        WHERE user_id = ?
        GROUP BY month
        ORDER BY month DESC`,
-      [userId]
+      [userId],
     );
 
     return res.json(summary);
@@ -183,7 +202,7 @@ const getWeeklySummary = async (req, res) => {
        WHERE user_id = ?
        GROUP BY week
        ORDER BY week DESC`,
-      [userId]
+      [userId],
     );
 
     return res.json(summary);
